@@ -1,0 +1,62 @@
+/* การตั้งค่าพื้นฐาน */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { 
+    font-family: 'Kanit', sans-serif; 
+    background-color: #000000; /* พื้นหลังดำสนิท */
+    color: #FFFFFF; 
+    overflow-x: hidden; 
+}
+
+/* Overlay สำหรับคลิกที่ว่าง (ห้ามแก้) */
+#globalOverlay { 
+    position: fixed; inset: 0; 
+    background: rgba(0,0,0,0.7); 
+    backdrop-filter: blur(10px); 
+    z-index: 100; display: none; 
+}
+
+/* Modal สีขาวมนตัดกับพื้นหลัง */
+.modal-container { 
+    position: fixed; top: 50%; left: 50%; 
+    transform: translate(-50%, -50%);
+    background: white; border-radius: 3.5rem; 
+    width: 90%; max-width: 500px;
+    padding: 3rem; z-index: 200; 
+    display: none; box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+    color: #1a1a1a;
+}
+#detailModal { max-width: 850px; max-height: 85vh; overflow-y: auto; }
+
+/* การ์ดอาหาร */
+.food-card { 
+    background: #0a0a0a; border-radius: 2.5rem; 
+    overflow: hidden; border: 1px solid #1a1a1a; 
+    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+}
+.food-card:hover { transform: translateY(-10px); border-color: #333; }
+
+.price-badge { 
+    position: absolute; top: 15px; right: 15px;
+    background: #ff6600; color: white; 
+    padding: 6px 16px; border-radius: 12px; 
+    font-weight: 800; font-size: 0.9rem;
+    box-shadow: 0 4px 15px rgba(255, 102, 0, 0.3);
+}
+
+.btn-brown { 
+    background: #1a1a1a; color: white; padding: 1.2rem; 
+    border-radius: 1.5rem; width: 100%; cursor: pointer; border: none; 
+    font-weight: bold; transition: 0.3s;
+}
+.btn-brown:hover { background: #000; }
+
+/* Sidebar */
+#sidebar { 
+    position: fixed; top: 0; right: -350px; width: 320px; height: 100%;
+    background: white; color: black; z-index: 150; transition: 0.5s; padding: 5rem 2rem; 
+}
+#areaLinks button {
+    text-align: left; font-size: 2.2rem; font-weight: 900; 
+    font-style: italic; line-height: 1; transition: 0.3s;
+}
+#areaLinks button:hover { color: #ff6600; transform: translateX(10px); }

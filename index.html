@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUM-RUB | สำรับ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Kanit', sans-serif; scroll-behavior: smooth; color: #1a1a1a; }
+        .modal-card {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; border-radius: 5rem; width: 94%; max-width: 550px;
+            z-index: 200; display: none; box-shadow: 0 60px 120px rgba(0,0,0,0.35);
+        }
+        .btn-main { background: #3D2B1F; color: white; width: 100%; padding: 25px; border-radius: 3rem; font-weight: 900; transition: 0.4s; }
+        .btn-main:hover { background: #000; transform: scale(1.02); }
+        .food-card { border-radius: 3.5rem; overflow: hidden; background: white; border: 1px solid #f0f0f0; transition: 0.5s; }
+        .food-card:hover { transform: translateY(-15px); box-shadow: 0 30px 60px rgba(0,0,0,0.08); }
+        .ingredient-tag { background: #fdf2f0; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: bold; color: #722F11; display: inline-block; margin: 3px; }
+        .comment-card { background: white; padding: 30px; border-radius: 3rem; border: 1px solid #efefef; display: flex; justify-content: space-between; align-items: center; }
+        #sidebar.open { right: 0 !important; }
+        #detailModal::-webkit-scrollbar { width: 6px; }
+        #detailModal::-webkit-scrollbar-thumb { background: #3D2B1F; border-radius: 10px; }
+        header {
+            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1500&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+        .delete-btn { color: #ff4d4d; font-size: 12px; font-weight: 900; border: 1px solid #ff4d4d; padding: 5px 15px; border-radius: 2rem; transition: 0.3s; cursor: pointer; text-transform: uppercase; }
+        .delete-btn:hover { background: #ff4d4d; color: white; }
+        .cart-qty-btn { width: 30px; height: 30px; border: 2px solid #3D2B1F; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; transition: 0.2s; }
+        .cart-qty-btn:hover { background: #3D2B1F; color: white; }
+        .receipt-line { border-bottom: 1px dashed #ccc; margin: 10px 0; }
+    </style>
+</head>
+<body class="bg-white">
+
+    <div id="globalOverlay" onclick="closeAll()" class="fixed inset-0 bg-black/60 z-[100] hidden backdrop-blur-sm"></div>
+
+    <nav class="bg-white sticky top-0 z-[110] border-b border-gray-100 px-6 py-4 flex justify-between items-center">
+        <h1 onclick="loadGlobalCover()" class="text-xl font-black italic cursor-pointer uppercase tracking-tighter">SUM-RUB</h1>
+        <div class="flex items-center gap-4">
+            <div id="userSection" class="hidden flex items-center gap-2 bg-gray-50 p-1 pr-3 rounded-full border border-gray-200">
+                <img id="userAvatar" src="" class="w-8 h-8 rounded-full border border-white shadow-sm">
+                <span id="userName" class="text-[10px] font-bold italic mr-2 text-[#3D2B1F]"></span>
+                <button id="t-logout" onclick="handleLogout()" class="text-[9px] text-red-500 font-black hover:underline uppercase">Logout</button>
+            </div>
+            <button id="loginBtnTrigger" onclick="openLogin()" class="text-[10px] font-black border-2 border-gray-300 px-4 py-1.5 rounded-full hover:bg-gray-100 transition uppercase">Login</button>
+            <button onclick="toggleLang()" class="text-[10px] font-black border-2 border-[#3D2B1F] px-3 py-1.5 rounded-full hover:bg-[#3D2B1F] hover:text-white transition">TH / EN</button>
+            <button onclick="openCart()" class="text-xl relative">🛒 <span id="cartCount" class="absolute -top-2 -right-2 bg-red-600 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full hidden">0</span></button>
+            <button onclick="openSidebar()" class="text-2xl">☰</button>
+        </div>
+    </nav>
+
+    <header class="bg-[#0c0c0c] py-24 text-center">
+        <h2 id="t-mainTitle" class="text-white text-4xl md:text-6xl font-black italic uppercase inline-block pb-2 border-b-4 border-orange-900">อาหารยอดนิยม</h2>
+        <div id="subCountry" class="text-orange-200/50 mt-6 text-xs font-bold tracking-[0.3em] uppercase italic"></div>
+    </header>
+
+    <main class="container mx-auto px-6 py-16">
+        <div id="mealGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12"></div>
+    </main>
+
+    <div id="loginModal" class="modal-card text-center">
+        <button onclick="closeAll()" class="absolute top-10 right-10 text-3xl text-gray-300">✕</button>
+        <div class="p-14">
+            <h2 class="text-4xl font-black italic mb-2 uppercase tracking-tighter">LOGIN</h2>
+            <p id="t-loginSub" class="text-[10px] text-gray-400 font-bold mb-10 uppercase tracking-widest">กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งาน</p>
+            <input type="email" id="t-loginEmail" placeholder="Email Address" class="w-full p-6 bg-gray-50 rounded-[2.5rem] mb-4 outline-none border border-gray-100 text-center font-bold text-gray-500 focus:border-[#3D2B1F] transition shadow-inner">
+            <input type="password" id="t-loginPass" placeholder="Password" class="w-full p-6 bg-gray-50 rounded-[2.5rem] mb-6 outline-none border border-gray-100 text-center font-bold text-gray-500 focus:border-[#3D2B1F] transition shadow-inner">
+            <button id="t-loginSubmit" onclick="handleLogin()" class="w-full bg-[#3D2B1F] text-white p-7 rounded-[3rem] font-black text-xl italic hover:bg-black transition shadow-xl uppercase tracking-tighter">เข้าสู่ระบบ</button>
+        </div>
+    </div>
+
+    <div id="detailModal" class="modal-card max-w-3xl max-h-[85vh] overflow-y-auto">
+        <button onclick="closeAll()" class="absolute top-8 right-8 text-3xl text-gray-400 hover:text-black z-20">✕</button>
+        <div id="detailContent" class="p-10 md:p-16"></div>
+    </div>
+
+    <div id="cartModal" class="modal-card">
+        <button onclick="closeAll()" class="absolute top-10 right-10 text-3xl text-gray-300">✕</button>
+        <div class="p-12">
+            <h2 id="t-cartHeader" class="text-2xl font-black italic mb-10 uppercase">MY CART</h2>
+            <div id="cartItems" class="space-y-5 mb-10 max-h-[300px] overflow-y-auto pr-2"></div>
+            <div class="flex justify-between items-center border-t pt-10">
+                <span id="t-total" class="font-black italic text-xl uppercase">TOTAL:</span>
+                <span id="cartTotal" class="text-4xl font-black text-[#722F11]">0 B</span>
+            </div>
+            <div class="flex gap-4 mt-10">
+                <button onclick="closeAll()" id="t-close" class="flex-1 border-2 border-[#3D2B1F] p-5 rounded-full font-black italic uppercase">CLOSE</button>
+                <button onclick="processCheckout()" id="btnCheckout" class="flex-[2] bg-[#3D2B1F] text-white p-5 rounded-full font-black italic uppercase shadow-lg">ORDER NOW</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="receiptModal" class="modal-card">
+        <div class="p-12 text-center">
+            <div class="text-5xl mb-6">🎉</div>
+            <h2 id="t-receipt" class="text-3xl font-black italic uppercase mb-2">OFFICIAL RECEIPT</h2>
+            <p id="t-thankyou" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-8">Thank you for dining with SUM-RUB</p>
+            <div id="receiptDetail" class="text-left font-medium text-sm space-y-2 mb-8 bg-gray-50 p-8 rounded-[3rem] border border-dashed border-gray-300"></div>
+            <button id="t-done" onclick="closeAll()" class="btn-main uppercase italic">Done</button>
+        </div>
+    </div>
+
+    <div id="sidebar" class="fixed top-0 right-[-450px] w-[380px] h-full bg-white z-[150] transition-all duration-500 shadow-2xl p-14 pt-28">
+        <button onclick="closeAll()" class="absolute top-12 right-12 text-4xl text-gray-300">✕</button>
+        <p id="t-sidebarTitle" class="text-[11px] font-bold text-gray-400 tracking-[0.5em] mb-14 uppercase italic border-b pb-4">SELECT COUNTRY</p>
+        <div id="areaLinks" class="flex flex-col gap-10"></div>
+    </div>
+
+    <section class="bg-gray-50 border-t border-gray-100 py-24">
+        <div class="container mx-auto px-6 max-w-4xl">
+            <h2 id="t-commentTitle" class="text-3xl font-black italic mb-12 uppercase text-[#3D2B1F]">Comments</h2>
+            <div class="bg-white p-8 rounded-[3rem] shadow-sm mb-12 flex gap-4 items-center border border-gray-100">
+                <img id="commentUserAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=guest" class="w-14 h-14 rounded-full border shadow-sm">
+                <input type="text" id="mainCommentInput" placeholder="แสดงความคิดเห็น..." class="flex-1 bg-gray-50 p-5 rounded-full outline-none border focus:border-orange-900 text-sm font-medium">
+                <button id="t-send" onclick="sendMainComment()" class="bg-[#3D2B1F] text-white px-10 py-5 rounded-full font-black hover:bg-black transition text-sm shadow-lg uppercase italic">Send</button>
+            </div>
+            <div id="mainCommentList" class="space-y-8"></div>
+        </div>
+    </section>
+
+    <script>
+        let cart = JSON.parse(localStorage.getItem('sr_cart')) || {};
+        let priceList = JSON.parse(localStorage.getItem('sr_prices')) || {};
+        let mainComments = JSON.parse(localStorage.getItem('sr_main_comments')) || [];
+        let currentUser = JSON.parse(localStorage.getItem('sr_user')) || null;
+        let currentLang = localStorage.getItem('sr_lang') || 'th';
+        let currentArea = JSON.parse(localStorage.getItem('sr_area')) || { api: 'Global', th: 'หน้าปก', en: 'Global' };
+
+        const langData = {
+            th: { 
+                pop: "อาหารยอดนิยม", cart: "🛒 ตะกร้าสินค้า", total: "ราคารวม:", close: "ปิดหน้าต่าง", 
+                login: "เข้าสู่ระบบ", logout: "ออกจากระบบ", country: "ประเทศ: ", commentPH: "พิมพ์ข้อความที่นี่...", 
+                sidebar: "เลือกประเทศ", commentTitle: "ความคิดเห็น", loginSub: "กรุณาเข้าสู่ระบบ", send: "ส่งข้อมูล",
+                globalSub: "เมนูแนะนำจากทั่วทุกมุมโลก", orderNow: "สั่งซื้อเลย", done: "เสร็จสิ้น",
+                emailPH: "อีเมลของคุณ", passPH: "รหัสผ่าน", receipt: "ใบเสร็จอย่างเป็นทางการ", thankyou: "ขอบคุณที่ใช้บริการ SUM-RUB", cooking: "กำลังเปิด...", globalCooking: "กำลังคนหา...", noMenu: "ไม่มีตราหารท่ีหนึ่ง"
+            },
+            en: { 
+                pop: "POPULAR DISHES", cart: "MY CART", total: "TOTAL:", close: "CLOSE", 
+                login: "LOG IN", logout: "LOGOUT", country: "COUNTRY: ", commentPH: "Type your comment...", 
+                sidebar: "SELECT COUNTRY", commentTitle: "COMMENTS", loginSub: "Please Login", send: "SEND",
+                globalSub: "WORLDWIDE BEST SELLERS", orderNow: "ORDER NOW", done: "DONE",
+                emailPH: "Your Email", passPH: "Your Password", receipt: "OFFICIAL RECEIPT", thankyou: "Thank you for dining with SUM-RUB", cooking: "COOKING...", globalCooking: "Global Cooking...", noMenu: "NO MENU AVAILABLE"
+            }
+        };
+
+        function closeAll() {
+            document.getElementById('globalOverlay').classList.add('hidden');
+            document.getElementById('cartModal').style.display = 'none';
+            document.getElementById('loginModal').style.display = 'none';
+            document.getElementById('detailModal').style.display = 'none';
+            document.getElementById('receiptModal').style.display = 'none';
+            document.getElementById('sidebar').classList.remove('open');
+        }
+
+        function openSidebar() {
+            document.getElementById('globalOverlay').classList.remove('hidden');
+            document.getElementById('sidebar').classList.add('open');
+        }
+
+        function openCart() {
+            renderCart();
+            document.getElementById('globalOverlay').classList.remove('hidden');
+            document.getElementById('cartModal').style.display = 'block';
+        }
+
+        function openLogin() {
+            closeAll();
+            document.getElementById('globalOverlay').classList.remove('hidden');
+            document.getElementById('loginModal').style.display = 'block';
+        }
+
+        async function openDetail(id) {
+            const content = document.getElementById('detailContent');
+            content.innerHTML = `<p class="text-center py-20 italic font-bold">กำลังเปิดตำราอาหาร...</p>`;
+            document.getElementById('globalOverlay').classList.remove('hidden');
+            document.getElementById('detailModal').style.display = 'block';
+            try {
+                const res = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`);
+                const data = await res.json();
+                const meal = data.meals[0];
+                let ing = "";
+                for (let i = 1; i <= 20; i++) {
+                    if (meal[`strIngredient${i}`]) ing += `<span class="ingredient-tag">${meal[`strIngredient${i}`]}</span>`;
+                }
+                content.innerHTML = `
+                    <img src="${meal.strMealThumb}" class="w-full h-72 object-cover rounded-[3rem] mb-8 shadow-md">
+                    <h2 class="text-4xl font-black italic uppercase mb-2 tracking-tighter">${meal.strMeal}</h2>
+                    <p class="text-orange-900 font-bold text-xs uppercase mb-8 tracking-widest">${meal.strCategory} | ${meal.strArea}</p>
+                    <h3 class="font-black italic text-lg mb-4 uppercase border-b-4 border-[#3D2B1F] inline-block text-[#3D2B1F]">Ingredients</h3>
+                    <div class="mb-10 flex flex-wrap">${ing}</div>
+                    <h3 class="font-black italic text-lg mb-4 uppercase border-b-4 border-[#3D2B1F] inline-block text-[#3D2B1F]">Instructions</h3>
+                    <p class="text-gray-600 text-sm leading-relaxed whitespace-pre-line text-justify">${meal.strInstructions}</p>
+                `;
+            } catch (e) { content.innerHTML = "Error loading data."; }
+        }
+
+        async function loadMeals(api, th, en) {
+            currentArea = { api, th, en };
+            localStorage.setItem('sr_area', JSON.stringify(currentArea));
+            document.getElementById('t-mainTitle').innerText = langData[currentLang].pop;
+            document.getElementById('subCountry').innerText = `${langData[currentLang].country} ${currentLang === 'th' ? th : en}`;
+            const grid = document.getElementById('mealGrid');
+            grid.innerHTML = `<div class="col-span-full text-center py-20 italic opacity-50 font-bold animate-pulse">${langData[currentLang].cooking}</div>`;
+            try {
+                const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?a=${api}`);
+                const data = await res.json();
+                if (!data.meals || data.meals.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-center py-20 italic opacity-50 font-bold">${langData[currentLang].noMenu}</div>`;
+                } else {
+                    renderItems(data.meals.slice(0, 9), false);
+                }
+            } catch (e) { grid.innerHTML = currentLang === 'th' ? "เกิดข้อมูล" : "Error loading menu."; }
+        }
+
+        async function loadGlobalCover() {
+            currentArea = { api: 'Global', th: 'หน้าปก', en: 'Global' };
+            localStorage.setItem('sr_area', JSON.stringify(currentArea));
+            const grid = document.getElementById('mealGrid');
+            document.getElementById('t-mainTitle').innerText = langData[currentLang].pop;
+            document.getElementById('subCountry').innerText = langData[currentLang].globalSub;
+            grid.innerHTML = `<div class="col-span-full text-center py-20 italic opacity-50 font-bold animate-pulse">${langData[currentLang].globalCooking}</div>`;
+            const areas = ['Thai', 'Japanese', 'Italian', 'British', 'Chinese'];
+            let allMeals = [];
+            try {
+                for (let a of areas) {
+                    const res = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?a=${a}`);
+                    const data = await res.json();
+                    if (data.meals) allMeals = [...allMeals, ...data.meals.slice(0, 2)];
+                }
+                allMeals.sort(() => Math.random() - 0.5);
+                renderItems(allMeals.slice(0, 9), true);
+            } catch (e) { grid.innerHTML = "Error."; }
+        }
+
+        function renderItems(meals, isGlobal) {
+            const grid = document.getElementById('mealGrid');
+            grid.innerHTML = meals.map(meal => {
+                if (!priceList[meal.strMeal]) {
+                    priceList[meal.strMeal] = (Math.floor(Math.random() * 19) * 5) + 60; 
+                    localStorage.setItem('sr_prices', JSON.stringify(priceList));
+                }
+                const price = priceList[meal.strMeal];
+                const qty = cart[meal.strMeal] || 0;
+                const callType = isGlobal ? `addGlobal('${meal.strMeal}', ` : `add('${meal.strMeal}', `;
+                return `
+                    <div class="food-card border shadow-sm">
+                        <img src="${meal.strMealThumb}" onclick="openDetail('${meal.idMeal}')" class="w-full h-72 object-cover cursor-pointer">
+                        <div class="p-10 text-center">
+                            <h3 onclick="openDetail('${meal.idMeal}')" class="font-black italic uppercase text-sm mb-5 truncate cursor-pointer">${meal.strMeal}</h3>
+                            <p class="text-3xl font-black text-[#722F11] mb-8 italic">${price} B</p>
+                            <div class="flex items-center justify-center gap-8">
+                                <button onclick="${callType}-1)" class="w-12 h-12 border-2 border-[#3D2B1F] rounded-full font-bold hover:bg-gray-100">-</button>
+                                <span class="font-black text-2xl">${qty}</span>
+                                <button onclick="${callType}1)" class="w-12 h-12 bg-[#3D2B1F] text-white rounded-full font-bold shadow-xl hover:scale-125 transition">+</button>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function add(name, change) {
+            cart[name] = Math.max(0, (cart[name] || 0) + change);
+            if (cart[name] === 0) delete cart[name];
+            localStorage.setItem('sr_cart', JSON.stringify(cart));
+            updateBadge();
+            if (currentArea.api === 'Global') loadGlobalCover();
+            else loadMeals(currentArea.api, currentArea.th, currentArea.en);
+            renderCart();
+        }
+
+        function addGlobal(name, change) { add(name, change); }
+
+        function toggleLang() {
+            currentLang = currentLang === 'th' ? 'en' : 'th';
+            localStorage.setItem('sr_lang', currentLang);
+            applyLanguage();
+            // Update subCountry with current language
+            const d = langData[currentLang];
+            if (currentArea.api === 'Global') {
+                document.getElementById('subCountry').innerText = d.globalSub;
+            } else {
+                document.getElementById('subCountry').innerText = `${d.country} ${currentLang === 'th' ? currentArea.th : currentArea.en}`;
+            }
+        }
+
+        function applyLanguage() {
+            const d = langData[currentLang];
+            const elements = {
+                't-mainTitle': d.pop, 't-cartHeader': d.cart, 't-total': d.total, 't-close': d.close,
+                't-loginEmail': d.emailPH, 't-loginPass': d.passPH, 'mainCommentInput': d.commentPH, 
+                't-sidebarTitle': d.sidebar, 't-commentTitle': d.commentTitle, 't-loginSub': d.loginSub,
+                't-loginSubmit': d.login, 't-send': d.send, 'btnCheckout': d.orderNow, 't-done': d.done,
+                't-logout': d.logout, 't-receipt': d.receipt, 't-thankyou': d.thankyou
+            };
+            for (let id in elements) {
+                let el = document.getElementById(id);
+                if (el) {
+                    if (el.tagName === 'INPUT') el.placeholder = elements[id];
+                    else el.innerText = elements[id];
+                }
+            }
+        }
+
+        function updateBadge() {
+            const totalQty = Object.values(cart).reduce((a, b) => a + b, 0);
+            const b = document.getElementById('cartCount');
+            if(b) { b.innerText = totalQty; b.classList.toggle('hidden', totalQty === 0); }
+        }
+
+        function renderCart() {
+            const list = document.getElementById('cartItems');
+            let total = 0;
+            list.innerHTML = Object.entries(cart).map(([name, qty]) => {
+                const p = (priceList[name] || 0) * qty;
+                total += p;
+                return `
+                <div class="flex justify-between items-center bg-gray-50 p-6 rounded-[3rem] border border-gray-100">
+                    <div class="flex-1 pr-4">
+                        <div class="font-black italic text-[11px] uppercase truncate mb-2">${name}</div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="add('${name}', -1)" class="cart-qty-btn">-</button>
+                            <span class="font-bold text-sm">${qty}</span>
+                            <button onclick="add('${name}', 1)" class="cart-qty-btn">+</button>
+                        </div>
+                    </div>
+                    <div class="font-black text-[#3D2B1F] text-lg">${p} B</div>
+                </div>`;
+            }).join('') || `<p class="text-center py-10 opacity-30">EMPTY</p>`;
+            document.getElementById('cartTotal').innerText = total + ' B';
+            document.getElementById('btnCheckout').disabled = total === 0;
+            document.getElementById('btnCheckout').style.opacity = total === 0 ? "0.5" : "1";
+        }
+
+        /* --- ฟังก์ชันอัปเกรด: รายละเอียดใบเสร็จเยอะขึ้นมาก --- */
+        function processCheckout() {
+            if (!currentUser) {
+                alert(currentLang === 'th' ? "กรุณาเข้าสู่ระบบก่อนสั่งซื้อ" : "Please login before order");
+                return openLogin();
+            }
+
+            const detail = document.getElementById('receiptDetail');
+            let subtotal = 0;
+            const orderId = 'SR-' + Math.floor(Math.random() * 900000 + 100000);
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('th-TH') + ' ' + now.toLocaleTimeString('th-TH');
+
+            // ส่วนหัวใบเสร็จ
+            let itemsHtml = `
+                <div class="text-center mb-6">
+                    <p class="font-black text-xl italic">SUM-RUB OFFICIAL</p>
+                    <p class="text-[9px] text-gray-400 uppercase tracking-widest">Digital Tax Invoice / Receipt</p>
+                </div>
+                <div class="flex justify-between text-[10px] mb-1"><span>Order ID:</span> <span class="font-bold">${orderId}</span></div>
+                <div class="flex justify-between text-[10px] mb-1"><span>Date:</span> <span class="font-bold">${dateStr}</span></div>
+                <div class="flex justify-between text-[10px] mb-4"><span>Customer:</span> <span class="font-bold">${currentUser.name}</span></div>
+                <div class="receipt-line"></div>
+                <div class="py-2">
+            `;
+            
+            // รายการอาหารในใบเสร็จ
+            Object.entries(cart).forEach(([name, qty]) => {
+                const p = (priceList[name] || 0) * qty;
+                subtotal += p;
+                itemsHtml += `
+                    <div class="flex justify-between text-xs mb-2">
+                        <span class="flex-1 pr-2">${name}</span>
+                        <span class="w-8 text-center text-gray-400">x${qty}</span>
+                        <span class="w-20 text-right font-bold">${p.toLocaleString()} B</span>
+                    </div>
+                `;
+            });
+
+            // การคำนวณเงินแบบละเอียด
+            const serviceCharge = subtotal * 0.10;
+            const vat = (subtotal + serviceCharge) * 0.07;
+            const finalTotal = subtotal + serviceCharge + vat;
+
+            itemsHtml += `
+                </div>
+                <div class="receipt-line"></div>
+                <div class="space-y-1.5 py-2 text-[11px]">
+                    <div class="flex justify-between"><span>Subtotal (รายการอาหาร)</span> <span>${subtotal.toLocaleString()} B</span></div>
+                    <div class="flex justify-between text-gray-400"><span>Service Charge (10%)</span> <span>${serviceCharge.toFixed(2)} B</span></div>
+                    <div class="flex justify-between text-gray-400"><span>VAT (7%)</span> <span>${vat.toFixed(2)} B</span></div>
+                </div>
+                <div class="receipt-line"></div>
+                <div class="flex justify-between items-center pt-2 font-black text-2xl text-[#722F11] italic">
+                    <span>NET TOTAL</span> 
+                    <span>${Math.round(finalTotal).toLocaleString()} B</span>
+                </div>
+                <div class="mt-8 text-center border-2 border-green-500 rounded-2xl p-2">
+                    <p class="text-green-600 text-[10px] font-black uppercase tracking-widest">✅ PAID / ชำระเงินเรียบร้อยแล้ว</p>
+                </div>
+                <p class="text-center text-[8px] text-gray-300 mt-6 italic">--- ขอบคุณที่เลือกใช้บริการสำรับ ---</p>
+            `;
+
+            detail.innerHTML = itemsHtml;
+            
+            // ล้างตะกร้าสินค้า
+            cart = {};
+            localStorage.setItem('sr_cart', JSON.stringify(cart));
+            updateBadge();
+            
+            // ปิดตะกร้าและเปิดใบเสร็จ
+            document.getElementById('cartModal').style.display = 'none';
+            document.getElementById('receiptModal').style.display = 'block';
+            
+            // อัปเดต UI หน้าจอหลัก
+            if (currentArea.api === 'Global') loadGlobalCover();
+            else loadMeals(currentArea.api, currentArea.th, currentArea.en);
+        }
+
+        function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            if (email.includes('@') && pass.length >= 4) {
+                currentUser = { name: email.split('@')[0].toUpperCase(), img: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}` };
+                localStorage.setItem('sr_user', JSON.stringify(currentUser));
+                location.reload();
+            } else { alert("Error Email or Password"); }
+        }
+
+        function handleLogout() { localStorage.removeItem('sr_user'); location.reload(); }
+
+        function sendMainComment() {
+            if (!currentUser) return openLogin();
+            const input = document.getElementById('mainCommentInput');
+            if (input.value.trim()) {
+                mainComments.unshift({ user: currentUser.name, img: currentUser.img, text: input.value });
+                localStorage.setItem('sr_main_comments', JSON.stringify(mainComments));
+                input.value = ''; renderMainComments();
+            }
+        }
+
+        function renderMainComments() {
+            const list = document.getElementById('mainCommentList');
+            if (!list) return;
+            list.innerHTML = mainComments.map((c, index) => {
+                const isMyComment = currentUser && c.user === currentUser.name;
+                return `
+                <div class="comment-card shadow-sm">
+                    <div class="flex gap-4 items-center">
+                        <img src="${c.img}" class="w-12 h-12 rounded-full border">
+                        <div>
+                            <h4 class="font-black italic text-sm">${c.user}</h4>
+                            <p class="text-gray-700 text-sm">${c.text}</p>
+                        </div>
+                    </div>
+                    ${isMyComment ? `<button onclick="deleteComment(${index})" class="delete-btn">ลบ</button>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function deleteComment(index) {
+            if (confirm("คุณแน่ใจหรือไม่ว่าต้องการลบคอมเมนต์นี้?")) {
+                mainComments.splice(index, 1);
+                localStorage.setItem('sr_main_comments', JSON.stringify(mainComments));
+                renderMainComments();
+            }
+        }
+
+        window.onload = () => {
+            applyLanguage();
+            const countries = [
+                { th: "ไทย", en: "THAILAND", api: "Thai" },
+                { th: "ญี่ปุ่น", en: "JAPAN", api: "Japanese" },
+                { th: "อิตาลี", en: "ITALY", api: "Italian" },
+                { th: "ฝรั่งเศส", en: "FRANCE", api: "French" },
+                { th: "จีน", en: "CHINA", api: "Chinese" }
+            ];
+            const countryMaps = {
+                'Thai': 'Thai', 'Japanese': 'Japanese', 'Italian': 'Italian',
+                'British': 'British', 'Chinese': 'Chinese'
+            };
+            const displayCountries = [
+                { th: "ไทย", en: "THAILAND", api: countryMaps['Thai'] },
+                { th: "ญี่ปุ่น", en: "JAPAN", api: countryMaps['Japanese'] },
+                { th: "อิตาลี", en: "ITALY", api: countryMaps['Italian'] },
+                { th: "อังกฤษ", en: "BRITISH", api: countryMaps['British'] },
+                { th: "จีน", en: "CHINA", api: countryMaps['Chinese'] }
+            ];
+            document.getElementById('areaLinks').innerHTML = displayCountries.map(c => `<button onclick="closeAll(); loadMeals('${c.api}', '${c.th}', '${c.en}')" class="text-5xl font-black italic uppercase text-left hover:text-orange-900 transition text-[#3D2B1F]">${c.en}</button>`).join('');
+            if (currentArea.api === 'Global') loadGlobalCover();
+            else loadMeals(currentArea.api, currentArea.th, currentArea.en);
+            updateBadge();
+            renderMainComments();
+            if (currentUser) {
+                document.getElementById('userSection').classList.remove('hidden');
+                document.getElementById('loginBtnTrigger').classList.add('hidden');
+                document.getElementById('userAvatar').src = currentUser.img;
+                document.getElementById('userName').innerText = currentUser.name;
+            }
+        };
+    </script>
+</body>
+</html>
