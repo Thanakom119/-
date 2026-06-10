@@ -3,6 +3,7 @@ let cart = JSON.parse(localStorage.getItem('sr_cart')) || {};
 let priceList = JSON.parse(localStorage.getItem('sr_prices')) || {};
 let mainComments = JSON.parse(localStorage.getItem('sr_main_comments')) || [];
 let currentUser = JSON.parse(localStorage.getItem('sr_user')) || null;
+let currentUsers = JSON.parse(localStorage.getItem('sr_users')) || [];
 let currentLang = localStorage.getItem('sr_lang') || 'th';
 let currentArea = JSON.parse(localStorage.getItem('sr_area')) || { api: 'Thai', th: 'ไทย', en: 'THAILAND' };
 
@@ -10,13 +11,15 @@ let currentArea = JSON.parse(localStorage.getItem('sr_area')) || { api: 'Thai', 
 const langData = {
     th: { 
         title: "เมนูยอดนิยมทั่วโลก", cart: "🛒 ตะกร้าสินค้า", total: "ราคารวม:", close: "ปิดหน้าต่าง", 
-        login: "เข้าสู่ระบบ", country: "ประเทศ: ", commentPH: "พิมพ์ข้อความที่นี่...", 
-        sidebar: "เลือกประเทศ", commentTitle: "ความคิดเห็น", loginSub: "กรุณาเข้าสู่ระบบ", send: "ส่งข้อมูล"
+        login: "เข้าสู่ระบบ", logout: "ออกจากระบบ", country: "ประเทศ: ", commentPH: "พิมพ์ข้อความที่นี่...", 
+        sidebar: "เลือกประเทศ", commentTitle: "ความคิดเห็น", loginSub: "กรุณาเข้าสู่ระบบ", send: "ส่งข้อมูล",
+        signupTitle: "สมัครสมาชิก", signupSub: "กรอกข้อมูลเพื่อลงทะเบียน", confirmPassPH: "ยืนยันรหัสผ่าน", alreadyMember: "กลับไปหน้าเข้าสู่ระบบ"
     },
     en: { 
         title: "GLOBAL POPULAR MENU", cart: "MY CART", total: "TOTAL:", close: "CLOSE", 
-        login: "LOG IN", country: "COUNTRY: ", commentPH: "Type your comment...", 
-        sidebar: "SELECT COUNTRY", commentTitle: "COMMENTS", loginSub: "Please Login", send: "SEND"
+        login: "LOG IN", logout: "LOGOUT", country: "COUNTRY: ", commentPH: "Type your comment...", 
+        sidebar: "SELECT COUNTRY", commentTitle: "COMMENTS", loginSub: "Please Login", send: "SEND",
+        signupTitle: "SIGN UP", signupSub: "Enter your details to register", confirmPassPH: "Confirm Password", alreadyMember: "Back to Login"
     }
 };
 
@@ -25,6 +28,7 @@ function closeAll() {
     document.getElementById('globalOverlay').classList.add('hidden');
     document.getElementById('cartModal').style.display = 'none';
     document.getElementById('loginModal').style.display = 'none';
+    document.getElementById('signupModal').style.display = 'none';
     document.getElementById('detailModal').style.display = 'none';
     document.getElementById('sidebar').classList.remove('open');
 }
@@ -44,6 +48,12 @@ function openLogin() {
     closeAll();
     document.getElementById('globalOverlay').classList.remove('hidden');
     document.getElementById('loginModal').style.display = 'block';
+}
+
+function openSignup() {
+    closeAll();
+    document.getElementById('globalOverlay').classList.remove('hidden');
+    document.getElementById('signupModal').style.display = 'block';
 }
 
 async function openDetail(id) {
@@ -164,23 +174,70 @@ function applyLanguage() {
         't-cartHeader': d.cart, 't-total': d.total, 't-close': d.close,
         'mainCommentInput': d.commentPH, 't-sidebarTitle': d.sidebar,
         't-commentTitle': d.commentTitle, 't-loginSub': d.loginSub,
-        't-loginSubmit': d.login, 't-send': d.send
+        't-loginSubmit': d.login, 't-send': d.send,
+        't-loginTitle': d.login, 't-signupTitle': d.signupTitle,
+        't-signupSub': d.signupSub, 't-loginSwitch': d.alreadyMember
+    };
+    const placeholders = {
+        't-loginEmail': d.emailPH || 'Email Address', 't-loginPass': d.passPH || 'Password',
+        't-signupEmail': d.emailPH || 'Email Address', 't-signupPass': d.passPH || 'Password',
+        't-signupConfirm': d.confirmPassPH || 'Confirm Password'
     };
     for (let id in elements) {
         let el = document.getElementById(id);
         if (el) el.placeholder ? el.placeholder = elements[id] : el.innerText = elements[id];
     }
+    for (let id in placeholders) {
+        let el = document.getElementById(id);
+        if (el) el.placeholder = placeholders[id];
+    }
 }
 
-// ฟังก์ชันอื่นๆ (Login, Logout, Comments) ยังคงเดิม
+function findUser(email) {
+    return currentUsers.find(user => user.email.toLowerCase() === email.toLowerCase());
+}
+
 function handleLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const pass = document.getElementById('loginPass').value.trim();
-    if (email.includes('@') && pass.length >= 4) {
-        currentUser = { name: email.split('@')[0].toUpperCase(), img: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}` };
-        localStorage.setItem('sr_user', JSON.stringify(currentUser));
-        location.reload();
-    } else { alert("Error!"); }
+    const email = document.getElementById('t-loginEmail').value.trim();
+    const pass = document.getElementById('t-loginPass').value.trim();
+    if (!email.includes('@') || pass.length < 4) {
+        return alert("Error! Please enter valid email and password.");
+    }
+    const user = findUser(email);
+    if (!user) {
+        return alert("User not found. Please register first.");
+    }
+    if (user.pass !== pass) {
+        return alert("Incorrect password. Please try again.");
+    }
+    currentUser = { name: user.name, img: user.img, email: user.email };
+    localStorage.setItem('sr_user', JSON.stringify(currentUser));
+    alert('Login successful');
+    location.reload();
+}
+
+function handleSignup() {
+    const email = document.getElementById('t-signupEmail').value.trim();
+    const pass = document.getElementById('t-signupPass').value.trim();
+    const confirm = document.getElementById('t-signupConfirm').value.trim();
+    if (!email.includes('@') || pass.length < 4 || confirm.length < 4) {
+        return alert("Error! Please enter a valid email and password with at least 4 characters.");
+    }
+    if (pass !== confirm) {
+        return alert("Passwords do not match.");
+    }
+    if (findUser(email)) {
+        return alert("This email is already registered. Please login.");
+    }
+    const name = email.split('@')[0].toUpperCase();
+    const img = `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`;
+    const newUser = { email, pass, name, img };
+    currentUsers.push(newUser);
+    localStorage.setItem('sr_users', JSON.stringify(currentUsers));
+    currentUser = { name, img, email };
+    localStorage.setItem('sr_user', JSON.stringify(currentUser));
+    alert('Registration successful');
+    location.reload();
 }
 
 function handleLogout() { localStorage.removeItem('sr_user'); location.reload(); }
